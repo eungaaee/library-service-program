@@ -230,6 +230,26 @@ void print_list(enum file_or_struct_type target_list) {
 }
 #endif
 
+void sync_file(enum file_or_struct_type target_file) {
+	open_file(target_file, "w");
+
+	if (target_file == CLIENT) {
+		for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+			fprintf(client_fp, "%d | %s | %s | %s | %s\n", i->data.id, i->data.password, i->data.name, i->data.address, i->data.phone_number);
+		}
+	} else if (target_file == BOOK) {
+		for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+			fprintf(book_fp, "%d | %s | %s | %s | %lld | %s | %c\n", i->data.id, i->data.name, i->data.publisher, i->data.author, i->data.ISBN, i->data.location, i->data.available);
+		}
+	} else if (target_file == BORROW) {
+		for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
+			fprintf(borrow_fp, "%d | %d | %ld | %ld\n", i->data.client_id, i->data.book_id, i->data.borrow_date, i->data.return_date);
+		}
+	}
+
+	close_file(target_file);
+}
+
 int main() {
     initialize_lists();
     sort_list(ALL);
@@ -245,6 +265,8 @@ int main() {
 		}
 	}
     print_list(CLIENT);
+
+	save_to_file(CLIENT);
 #endif
 
     return 0;
