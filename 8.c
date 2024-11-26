@@ -9,29 +9,29 @@ enum file_or_struct_type { CLIENT, BOOK, BORROW, ALL };
 
 FILE *client_fp, *book_fp, *borrow_fp;
 
-void open_file(enum file_or_struct_type target_file) {
+void open_file(enum file_or_struct_type target_file, char *mode) {
     if (target_file == CLIENT) {
-        client_fp = fopen("./client.txt", "r");
+        client_fp = fopen("./client.txt", mode);
         if (client_fp == NULL) {
             printf("Error: client.txt not found\n");
             exit(1);
         }
     } else if (target_file == BOOK) {
-        book_fp = fopen("./book.txt", "r");
+        book_fp = fopen("./book.txt", mode);
         if (book_fp == NULL) {
             printf("Error: book.txt not found\n");
             exit(1);
         }
     } else if (target_file == BORROW) {
-        borrow_fp = fopen("./borrow.txt", "r");
+        borrow_fp = fopen("./borrow.txt", mode);
         if (borrow_fp == NULL) {
             printf("Error: borrow.txt not found\n");
             exit(1);
         }
     } else if (target_file == ALL) {
-        open_file(CLIENT);
-        open_file(BOOK);
-        open_file(BORROW);
+        open_file(CLIENT, mode);
+        open_file(BOOK, mode);
+        open_file(BORROW, mode);
     }
 }
 
@@ -152,7 +152,7 @@ void erase(enum file_or_struct_type target_list, void *prev_node) {
 }
 
 void initialize_lists() {
-    open_file(ALL);
+    open_file(ALL, "r");
 
     struct client client_data;
     while (fscanf(client_fp, "%d | %s | %[^|]| %[^|]| %s", &client_data.id, client_data.password, client_data.name, client_data.address, client_data.phone_number) != EOF) {
