@@ -62,7 +62,7 @@ struct book {
     char name[50];
     char publisher[20];
     char author[20];
-    long long int ISBN;
+    long long ISBN;
     char location[50];
     char available;
 };
@@ -109,6 +109,46 @@ void push_front(enum file_or_struct_type target_list, void *data_ptr) {
         new_node->next = borrow_list_head;
         borrow_list_head = new_node;
     }
+}
+
+void erase(enum file_or_struct_type target_list, void *prev_node) {
+	if (target_list == CLIENT) {
+		struct client_node *target_node; // 삭제할 노드
+
+		if (prev_node == NULL) { // 맨 앞 노드를 삭제하는 경우
+			target_node = client_list_head;
+			client_list_head = client_list_head->next;
+		} else {
+			target_node = ((struct client_node *)prev_node)->next;
+			((struct client_node *)prev_node)->next = target_node->next;
+		}
+
+		free(target_node); // 삭제하는 노드의 메모리 해제
+	} else if (target_list == BOOK) {
+		struct book_node *target_node;
+
+		if (prev_node == NULL) {
+			target_node = book_list_head;
+			book_list_head = book_list_head->next;
+		} else {
+			target_node = ((struct book_node *)prev_node)->next;
+			((struct book_node *)prev_node)->next = target_node->next;
+		}
+
+		free(target_node);
+	} else if (target_list == BORROW) {
+		struct borrow_node *target_node;
+
+		if (prev_node == NULL) {
+			target_node = borrow_list_head;
+			borrow_list_head = borrow_list_head->next;
+		} else {
+			target_node = ((struct borrow_node *)prev_node)->next;
+			((struct borrow_node *)prev_node)->next = target_node->next;
+		}
+
+		free(target_node);
+	}
 }
 
 void initialize_lists() {
@@ -195,7 +235,16 @@ int main() {
     sort_list(ALL);
 	
 #ifdef DEBUG
-    print_list(ALL);
+	print_list(CLIENT);
+	putchar('\n');
+	erase(CLIENT, NULL); // 맨 앞 노드 삭제
+	for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+		if (i->next->data.id == 20230004) {
+			erase(CLIENT, i); // 20230004 삭제
+			break;
+		}
+	}
+    print_list(CLIENT);
 #endif
 
     return 0;
