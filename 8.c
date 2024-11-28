@@ -279,6 +279,8 @@ void PrintBookInfo(struct Book book, enum SearchBookMode mode) {
 }
 
 int BookFinder(enum FindBookBy by, ...) { // (find by, target's data type, target)
+    system("clear");
+
     int borrowed_count = 0, total_count = 0;
 
     if (by == SEARCH_ALL_BOOK) { // 5. 전체검색
@@ -357,7 +359,9 @@ int BookFinder(enum FindBookBy by, ...) { // (find by, target's data type, targe
 
 void SearchBook() {
     while (1) {
-        printf("\n>> 도서 검색 <<\n");
+        system("clear");
+
+        printf(">> 도서 검색 <<\n");
         printf("1. 도서명 검색\t\t2. 출판사 검색\n3. ISBN 검색\t\t4. 저자명 검색\n5. 전체 검색\t\t6. 이전 메뉴\n\n");
         
         int select;
@@ -412,6 +416,10 @@ void PrintDate(time_t t) {
 }
 
 void ClientBorrowInfo(int id) {
+    system("clear");
+
+    printf(">> 내 대여 목록 <<\n");
+
     for (struct BorrowNode *i = borrow_list_head; i != NULL; i = i->next) {
         if (i->data.client_id == id) {
             BookFinder(BOOK_ID, INT, i->data.book_id, BORROW_INFO); // BORROW_INFO: 도서번호, 도서명 출력
@@ -439,10 +447,6 @@ _Bool IsClientBorrowed(int id) {
     return 0;
 }
 
-_Bool IsBookBorrowed(int id) {
-
-}
-
 void ChangePassword(struct ClientNode *user) {
     char verify[20];
     printf("\n현재 비밀번호: ");
@@ -459,6 +463,7 @@ void ChangePassword(struct ClientNode *user) {
 
         printf("비밀번호 변경이 완료되었습니다.\n");
     }
+    getchar();
 }
 
 void ChangeAddress(struct ClientNode *user) {
@@ -468,6 +473,7 @@ void ChangeAddress(struct ClientNode *user) {
     SyncFile(CLIENT);
 
     printf("주소 변경이 완료되었습니다.\n");
+    getchar();
 }
 
 void ChangePhoneNumber(struct ClientNode *user) {
@@ -477,6 +483,7 @@ void ChangePhoneNumber(struct ClientNode *user) {
     SyncFile(CLIENT);
 
     printf("전화번호 변경이 완료되었습니다.\n");
+    getchar();
 }
 
 void AccountSetting(int id) {
@@ -486,7 +493,9 @@ void AccountSetting(int id) {
     }
 
     while (1) {
-        printf("\n>> 개인정보 수정 <<\n");
+        system("clear");
+
+        printf(">> 개인정보 수정 <<\n");
         printf("1. 비밀번호 변경\t\t2. 주소 변경\n3. 전화번호 변경\t\t4. 이전메뉴\n\n");
 
         int select;
@@ -503,11 +512,11 @@ void AccountSetting(int id) {
             break;
         }
     }
-
-    SyncFile(CLIENT);
 }
 
 _Bool DeleteAccount(int id) {
+    system("clear");
+
     char y_n;
     printf("정말 탈퇴하시겠습니까? (y / n) : ");
     getchar();
@@ -534,7 +543,9 @@ _Bool DeleteAccount(int id) {
 
 void UserMenu(int id) {
     while (1) {
-        printf("\n>> 회원 메뉴 <<\n");
+        system("clear");
+
+        printf(">> 회원 메뉴 <<\n");
         printf("1. 도서 검색\t\t2. 내 대여 목록\n3. 개인정보 수정\t4. 회원 탈퇴\n5. 로그아웃\t\t6. 프로그램 종료\n\n");
 
         int select;
@@ -559,6 +570,8 @@ void UserMenu(int id) {
 
 // administrator
 void AddBook() {
+    system("clear");
+
     struct Book book_data;
 
     printf(">> 도서 등록 <<\n");
@@ -605,6 +618,8 @@ void AddBook() {
 }
 
 void DeleteBook() {
+    system("clear");
+
     printf(">> 도서 삭제 <<\n");
     printf("1. 도서명 검색\t\t2. ISBN 검색\n\n");
 
@@ -692,7 +707,9 @@ void DeleteBook() {
 }
 
 void BorrowBook() {
-    printf("\n>> 도서 삭제 <<\n");
+    system("clear");
+
+    printf(">> 도서 대여 <<\n");
     printf("1. 도서명 검색\t\t2. ISBN 검색\n\n");
 
     int select;
@@ -821,6 +838,8 @@ void BorrowBook() {
 }
 
 void ReturnBook() {
+    system("clear");
+
     int client_id;
     printf("학번을 입력하세요: ");
     scanf("%d", &client_id);
@@ -908,7 +927,9 @@ void ClientFinder(enum FindClientBy by, ...) { // (search by, target's data type
 
 void SearchClient() {
     while (1) {
-        printf("\n>> 회원 목록 <<\n");
+        system("clear");
+
+        printf(">> 회원 목록 <<\n");
         printf("1. 이름 검색\t\t2. 학번 검색\n3. 전체 검색\t\t4. 이전 메뉴\n\n");
         
         int select;
@@ -939,7 +960,9 @@ void SearchClient() {
 
 void AdminMenu() {
     while (1) {
-        printf("\n>> 관리자 메뉴 <<\n");
+        system("clear");
+
+        printf(">> 관리자 메뉴 <<\n");
         printf("1. 도서 등록\t\t2. 도서 삭제\n3. 도서 대여\t\t4. 도서 반납\n5. 도서 검색\t\t6. 회원 목록\n7. 로그아웃\t\t8. 프로그램 종료\n\n");
 
         int select;
@@ -968,7 +991,9 @@ void AdminMenu() {
 
 // account
 void SignUp() {
-	printf("\n>> 회원 가입 <<\n");
+    system("clear");
+
+	printf(">> 회원 가입 <<\n");
 	printf("학번, 비밀번호, 이름, 주소, 전화번호를 입력하세요.\n\n");
 
 	struct Client client_data;
@@ -1006,9 +1031,11 @@ void SignUp() {
 }
 
 void LogIn() {
+    system("clear");
+
     char id[9], password[20];
 
-	printf("\n>> 로그인 <<\n");
+	printf(">> 로그인 <<\n");
 	printf("학번: ");
 	scanf("%s", id);
 	printf("비밀번호: ");
@@ -1034,6 +1061,8 @@ int main() {
     SortList(ALL_FILE_OR_STRUCT);
 
 	while (1) {
+        system("clear");
+
         printf(">> 도서 관리 프로그램 <<\n");
         printf("1. 회원 가입\t\t2. 로그인\t\t3. 프로그램 종료\n\n");
         printf("번호를 선택하세요: ");
