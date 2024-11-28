@@ -4,16 +4,16 @@
 #include <stdarg.h>
 #include <time.h>
 
-enum e_file_or_struct_type { CLIENT, BOOK, BORROW, ALL_FILE_OR_STRUCT };
+enum FileOrStructType { CLIENT, BOOK, BORROW, ALL_FILE_OR_STRUCT };
 
-enum e_find_book_by { BOOK_ID, BOOK_NAME, PUBLISHER, AUTHOR, ISBN, LOCATION, AVAILABLE, SEARCH_ALL_BOOK };
-enum e_data_type { INT, LONGLONG, STRING };
-enum e_search_book_mode { STANDARD_INFO, BORROW_INFO };
-enum e_find_client_by { CLIENT_NAME, CLIENT_ID, SEARCH_ALL_CLIENT };
+enum FindBookBy { BOOK_ID, BOOK_NAME, PUBLISHER, AUTHOR, ISBN, LOCATION, AVAILABLE, SEARCH_ALL_BOOK };
+enum DataType { INT, LONGLONG, STRING };
+enum SearchBookMode { STANDARD_INFO, ALL_INFO, BORROW_INFO };
+enum FindClientBy { CLIENT_NAME, CLIENT_ID, SEARCH_ALL_CLIENT };
 
 FILE *client_fp, *book_fp, *borrow_fp;
 
-void open_file(enum e_file_or_struct_type target_file, char *mode) {
+void OpenFile(enum FileOrStructType target_file, char *mode) {
     if (target_file == CLIENT) {
         client_fp = fopen("./client.txt", mode);
         if (client_fp == NULL) {
@@ -33,13 +33,13 @@ void open_file(enum e_file_or_struct_type target_file, char *mode) {
             exit(1);
         }
     } else if (target_file == ALL_FILE_OR_STRUCT) {
-        open_file(CLIENT, mode);
-        open_file(BOOK, mode);
-        open_file(BORROW, mode);
+        OpenFile(CLIENT, mode);
+        OpenFile(BOOK, mode);
+        OpenFile(BORROW, mode);
     }
 }
 
-void close_file(enum e_file_or_struct_type target_file) {
+void CloseFile(enum FileOrStructType target_file) {
     if (target_file == CLIENT) {
         fclose(client_fp);
     } else if (target_file == BOOK) {
@@ -47,13 +47,13 @@ void close_file(enum e_file_or_struct_type target_file) {
     } else if (target_file == BORROW) {
         fclose(borrow_fp);
     } else if (target_file == ALL_FILE_OR_STRUCT) {
-        close_file(CLIENT);
-        close_file(BOOK);
-        close_file(BORROW);
+        CloseFile(CLIENT);
+        CloseFile(BOOK);
+        CloseFile(BORROW);
     }
 }
 
-struct client {
+struct Client {
     int id;
     char password[20];
     char name[20];
@@ -61,7 +61,7 @@ struct client {
     char phone_number[20];
 };
 
-struct book {
+struct Book {
     int id;
     char name[50];
     char publisher[20];
@@ -71,156 +71,156 @@ struct book {
     char available;
 };
 
-struct borrow {
+struct Borrow {
     int client_id;
     int book_id;
     time_t borrow_date;
     time_t return_date;
 };
 
-struct client_node {
-    struct client data;
-    struct client_node *next;
+struct ClientNode {
+    struct Client data;
+    struct ClientNode *next;
 };
-struct client_node *client_list_head;
+struct ClientNode *client_list_head;
 
-struct book_node {
-    struct book data;
-    struct book_node *next;
+struct BookNode {
+    struct Book data;
+    struct BookNode *next;
 };
-struct book_node *book_list_head;
+struct BookNode *book_list_head;
 
-struct borrow_node {
-    struct borrow data;
-    struct borrow_node *next;
+struct BorrowNode {
+    struct Borrow data;
+    struct BorrowNode *next;
 };
-struct borrow_node *borrow_list_head;
+struct BorrowNode *borrow_list_head;
 
-void push_front(enum e_file_or_struct_type target_list, void *data_ptr) {
+void PushFront(enum FileOrStructType target_list, void *data_ptr) {
     if (target_list == CLIENT) {
-        struct client_node *new_node = (struct client_node *)malloc(sizeof(struct client_node));
-        new_node->data = *(struct client *)data_ptr;
+        struct ClientNode *new_node = (struct ClientNode *)malloc(sizeof(struct ClientNode));
+        new_node->data = *(struct Client *)data_ptr;
         new_node->next = client_list_head;
         client_list_head = new_node;
     } else if (target_list == BOOK) {
-        struct book_node *new_node = (struct book_node *)malloc(sizeof(struct book_node));
-        new_node->data = *(struct book *)data_ptr;
+        struct BookNode *new_node = (struct BookNode *)malloc(sizeof(struct BookNode));
+        new_node->data = *(struct Book *)data_ptr;
         new_node->next = book_list_head;
         book_list_head = new_node;
     } else if (target_list == BORROW) {
-        struct borrow_node *new_node = (struct borrow_node *)malloc(sizeof(struct borrow_node));
-        new_node->data = *(struct borrow *)data_ptr;
+        struct BorrowNode *new_node = (struct BorrowNode *)malloc(sizeof(struct BorrowNode));
+        new_node->data = *(struct Borrow *)data_ptr;
         new_node->next = borrow_list_head;
         borrow_list_head = new_node;
     }
 }
 
-void erase(enum e_file_or_struct_type target_list, void *prev_node) {
+void Erase(enum FileOrStructType target_list, void *prev_node) {
 	if (target_list == CLIENT) {
-		struct client_node *target_node; // 삭제할 노드
+		struct ClientNode *target_node; // 삭제할 노드
 
 		if (prev_node == NULL) { // 맨 앞 노드를 삭제하는 경우
 			target_node = client_list_head;
 			client_list_head = client_list_head->next;
 		} else {
-			target_node = ((struct client_node *)prev_node)->next;
-			((struct client_node *)prev_node)->next = target_node->next;
+			target_node = ((struct ClientNode *)prev_node)->next;
+			((struct ClientNode *)prev_node)->next = target_node->next;
 		}
 
 		free(target_node); // 삭제하는 노드의 메모리 해제
 	} else if (target_list == BOOK) {
-		struct book_node *target_node;
+		struct BookNode *target_node;
 
 		if (prev_node == NULL) {
 			target_node = book_list_head;
 			book_list_head = book_list_head->next;
 		} else {
-			target_node = ((struct book_node *)prev_node)->next;
-			((struct book_node *)prev_node)->next = target_node->next;
+			target_node = ((struct BookNode *)prev_node)->next;
+			((struct BookNode *)prev_node)->next = target_node->next;
 		}
 
 		free(target_node);
 	} else if (target_list == BORROW) {
-		struct borrow_node *target_node;
+		struct BorrowNode *target_node;
 
 		if (prev_node == NULL) {
 			target_node = borrow_list_head;
 			borrow_list_head = borrow_list_head->next;
 		} else {
-			target_node = ((struct borrow_node *)prev_node)->next;
-			((struct borrow_node *)prev_node)->next = target_node->next;
+			target_node = ((struct BorrowNode *)prev_node)->next;
+			((struct BorrowNode *)prev_node)->next = target_node->next;
 		}
 
 		free(target_node);
 	}
 }
 
-void initialize_lists() {
-    open_file(ALL_FILE_OR_STRUCT, "r");
+void InitializeLists() {
+    OpenFile(ALL_FILE_OR_STRUCT, "r");
 
-    struct client client_data;
+    struct Client client_data;
     while (fscanf(client_fp, "%d | %s | %[^|]| %[^|]| %s", &client_data.id, client_data.password, client_data.name, client_data.address, client_data.phone_number) != EOF) {
 		client_data.name[strlen(client_data.name) - 1] = '\0'; // 띄어쓰기 제거
 		client_data.address[strlen(client_data.address) - 1] = '\0';
-        push_front(CLIENT, &client_data);
+        PushFront(CLIENT, &client_data);
     }
 
-    struct book book_data;
+    struct Book book_data;
     while (fscanf(book_fp, "%d | %[^|]| %[^|]| %[^|]| %lld | %[^|]| %c", &book_data.id, book_data.name, book_data.publisher, book_data.author, &book_data.ISBN, book_data.location, &book_data.available) != EOF) {
 		book_data.name[strlen(book_data.name) - 1] = '\0';
 		book_data.publisher[strlen(book_data.publisher) - 1] = '\0';
 		book_data.author[strlen(book_data.author) - 1] = '\0';
 		book_data.location[strlen(book_data.location) - 1] = '\0';
-		push_front(BOOK, &book_data);
+		PushFront(BOOK, &book_data);
     }
 
-    struct borrow borrow_data;
+    struct Borrow borrow_data;
     while (fscanf(borrow_fp, "%d | %d | %ld | %ld", &borrow_data.client_id, &borrow_data.book_id, &borrow_data.borrow_date, &borrow_data.return_date) != EOF) {
-		push_front(BORROW, &borrow_data);
+		PushFront(BORROW, &borrow_data);
     }
 
-    close_file(ALL_FILE_OR_STRUCT);
+    CloseFile(ALL_FILE_OR_STRUCT);
 }
 
-void sort_list(enum e_file_or_struct_type target_list) {
+void SortList(enum FileOrStructType target_list) {
     if (target_list == CLIENT) {
-        for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
-            for (struct client_node *j = i->next; j != NULL; j = j->next) {
+        for (struct ClientNode *i = client_list_head; i != NULL; i = i->next) {
+            for (struct ClientNode *j = i->next; j != NULL; j = j->next) {
                 if (i->data.id > j->data.id) {
-                    struct client temp = i->data;
+                    struct Client temp = i->data;
                     i->data = j->data;
                     j->data = temp;
                 }
             }
         }
     } else if (target_list == BOOK) {
-        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
-            for (struct book_node *j = i->next; j != NULL; j = j->next) {
+        for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
+            for (struct BookNode *j = i->next; j != NULL; j = j->next) {
                 if (i->data.ISBN > j->data.ISBN) {
-                    struct book temp = i->data;
+                    struct Book temp = i->data;
                     i->data = j->data;
                     j->data = temp;
                 }
             }
         }
     } else if (target_list == ALL_FILE_OR_STRUCT) {
-		sort_list(CLIENT);
-		sort_list(BOOK);
+		SortList(CLIENT);
+		SortList(BOOK);
 	}
 }
 
 #ifdef DEBUG
 void print_list(enum e_file_or_struct_type target_list) {
     if (target_list == CLIENT) {
-        for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+        for (struct ClientNode *i = client_list_head; i != NULL; i = i->next) {
             printf("%d | %s | %s | %s | %s\n", i->data.id, i->data.password, i->data.name, i->data.address, i->data.phone_number);
         }
     } else if (target_list == BOOK) {
-        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+        for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
             printf("%d | %s | %s | %s | %lld | %s | %c\n", i->data.id, i->data.name, i->data.publisher, i->data.author, i->data.ISBN, i->data.location, i->data.available);
         }
     } else if (target_list == BORROW) {
-        for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
+        for (struct BorrowNode *i = borrow_list_head; i != NULL; i = i->next) {
             printf("%d | %d | %ld | %ld\n", i->data.client_id, i->data.book_id, i->data.borrow_date, i->data.return_date);
         }
     } else if (target_list == ALL_FILE_OR_STRUCT) {
@@ -234,56 +234,67 @@ void print_list(enum e_file_or_struct_type target_list) {
 }
 #endif
 
-void sync_file(enum e_file_or_struct_type target_file) {
-	open_file(target_file, "w");
+void SyncFile(enum FileOrStructType target_file) {
+	OpenFile(target_file, "w");
 
 	if (target_file == CLIENT) {
-		for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+		for (struct ClientNode *i = client_list_head; i != NULL; i = i->next) {
 			fprintf(client_fp, "%d | %s | %s | %s | %s\n", i->data.id, i->data.password, i->data.name, i->data.address, i->data.phone_number);
 		}
 	} else if (target_file == BOOK) {
-		for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+		for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
 			fprintf(book_fp, "%d | %s | %s | %s | %lld | %s | %c\n", i->data.id, i->data.name, i->data.publisher, i->data.author, i->data.ISBN, i->data.location, i->data.available);
 		}
 	} else if (target_file == BORROW) {
-		for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
+		for (struct BorrowNode *i = borrow_list_head; i != NULL; i = i->next) {
 			fprintf(borrow_fp, "%d | %d | %ld | %ld\n", i->data.client_id, i->data.book_id, i->data.borrow_date, i->data.return_date);
 		}
 	}
 
-	close_file(target_file);
+	CloseFile(target_file);
 }
 
 // user
-void print_book_info(struct book book, enum e_search_book_mode mode) {
+void PrintBookInfo(struct Book book, enum SearchBookMode mode) {
     if (mode == STANDARD_INFO) {
         printf("\n도서명: %s\n", book.name);
         printf("출판사: %s\n", book.publisher);
         printf("저자명: %s\n", book.author);
         printf("ISBN: %lld\n", book.ISBN);
         printf("소장처: %s\n", book.location);
-        printf("대여가능 여부: %c(%d/%d)\n", book.available, 0, 0); // TODO: 대여된 총 권수, 보유하고 있는 총 권수 어떻게 알아내지
-        /* printf("** Y는 대여가능, N은 대여불가를 의미\n");
-        printf("** (x/y) : (대여된 총 권수 / 보유하고 있는 총 권수)\n"); */
+        // 대여가능 여부 및 (대여됨/전체) 는 효율을 위해 이 함수의 호출 위치에서 출력
+    } else if (mode == ALL_INFO) {
+        printf("\n도서번호: %d\n", book.id);
+        printf("도서명: %s\n", book.name);
+        printf("출판사: %s\n", book.publisher);
+        printf("저자명: %s\n", book.author);
+        printf("ISBN: %lld\n", book.ISBN);
+        printf("소장처: %s\n", book.location);
+        printf("대여가능 여부: %c\n", book.available);
     } else if (mode == BORROW_INFO) {
         printf("\n도서번호 : %d\n", book.id);
         printf("도서명 : %s\n", book.name);
-        // 대여일자 및 반납일자는 효율을 위해 이 함수의 호출위치에서 출력
+        // 대여일자 및 반납일자는 효율을 위해 이 함수의 호출 위치에서 출력
     }
 }
 
-void book_finder(enum e_find_book_by by, ...) { // (find by, target's data type, target)
+int BookFinder(enum FindBookBy by, ...) { // (find by, target's data type, target)
+    int borrowed_count = 0, total_count = 0;
+
     if (by == SEARCH_ALL_BOOK) { // 5. 전체검색
-        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
-            print_book_info(i->data, STANDARD_INFO);
+        for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
+            PrintBookInfo(i->data, ALL_INFO);
+            putchar('\n');
+            
+            total_count++;
         }
-        return;
+        return total_count;
     }
 
     // 1. - 4.
     va_list ap;
     va_start(ap, by);
-    enum e_data_type type = va_arg(ap, enum e_data_type);
+    enum DataType type = va_arg(ap, enum DataType);
     
     int int_target;
     long long longlong_target;
@@ -296,29 +307,55 @@ void book_finder(enum e_find_book_by by, ...) { // (find by, target's data type,
     else if (type == STRING)
         str_target = va_arg(ap, char *);
     
-    enum e_search_book_mode mode = va_arg(ap, enum e_search_book_mode);
+    enum SearchBookMode mode = va_arg(ap, enum SearchBookMode);
     
-    for (struct book_node *i = book_list_head; i != NULL; i = i -> next) {
+    for (struct BookNode *i = book_list_head; i != NULL; i = i -> next) {
         if (by == BOOK_NAME) {
-            if (strcmp(i->data.name, str_target) == 0)
-                print_book_info(i->data, mode);
+            if (strcmp(i->data.name, str_target) == 0) {
+                PrintBookInfo(i->data, mode);
+
+                if (i->data.available == 'N') borrowed_count++;
+                total_count++;
+            }
         } else if (by == PUBLISHER) {
-            if (strcmp(i->data.publisher, str_target) == 0)
-                print_book_info(i->data, mode);
+            if (strcmp(i->data.publisher, str_target) == 0) {
+                PrintBookInfo(i->data, mode);
+                
+                if (i->data.available == 'N') borrowed_count++;
+                total_count++;
+            }
         } else if (by == ISBN) {
-            if (i->data.ISBN == longlong_target)
-                print_book_info(i->data, mode);
+            if (i->data.ISBN == longlong_target) {
+                PrintBookInfo(i->data, mode);
+
+                if (i->data.available == 'N') borrowed_count++;
+                total_count++;
+            }
         } else if (by == AUTHOR) {
-            if (strcmp(i->data.author, str_target) == 0)
-                print_book_info(i->data, mode);
+            if (strcmp(i->data.author, str_target) == 0) {
+                PrintBookInfo(i->data, mode);
+
+                if (i->data.available == 'N') borrowed_count++;
+                total_count++;
+            }
         } else if (by == BOOK_ID) {
-            if (i->data.id == int_target)
-                print_book_info(i->data, mode);
+            if (i->data.id == int_target) {
+                PrintBookInfo(i->data, mode);
+
+                if (i->data.available == 'N') borrowed_count++;
+                total_count++;
+            }
+        }
+
+        if (i->next == NULL && total_count > 0) {
+            printf("\n대여가능 여부: %c(%d/%d)\n", borrowed_count < total_count ? 'Y' : 'N', borrowed_count, total_count);
         }
     }
+
+    return total_count;
 }
 
-void search_book() {
+void SearchBook() {
     while (1) {
         printf("\n>> 도서 검색 <<\n");
         printf("1. 도서명 검색\t\t2. 출판사 검색\n3. ISBN 검색\t\t4. 저자명 검색\n5. 전체 검색\t\t6. 이전 메뉴\n\n");
@@ -327,53 +364,57 @@ void search_book() {
         printf("번호를 선택하세요: ");
         scanf("%d", &select);
 
+        int result_count;
+
         if (select == 1) {
             char target_name[50];
             printf("\n도서명을 입력하세요: ");
             getchar();
             scanf("%[^\n]", target_name);
 
-            book_finder(BOOK_NAME, STRING, target_name, STANDARD_INFO);
+            result_count = BookFinder(BOOK_NAME, STRING, target_name, STANDARD_INFO);
         } else if (select == 2) {
             char target_publisher[20];
             printf("\n출판사를 입력하세요: ");
             getchar();
             scanf("%[^\n]", target_publisher);
 
-            book_finder(PUBLISHER, STRING, target_publisher, STANDARD_INFO);
+            result_count = BookFinder(PUBLISHER, STRING, target_publisher, STANDARD_INFO);
         } else if (select == 3) {
             long long target_ISBN;
             printf("\nISBN을 입력하세요: ");
             scanf("%lld", &target_ISBN);
 
-            book_finder(ISBN, LONGLONG, target_ISBN, STANDARD_INFO);
+            result_count = BookFinder(ISBN, LONGLONG, target_ISBN, STANDARD_INFO);
         } else if (select == 4) {
             char target_author[20];
             printf("\n저자명을 입력하세요: ");
             getchar();
             scanf("%[^\n]", target_author);
 
-            book_finder(AUTHOR, STRING, target_author, STANDARD_INFO);
+            result_count = BookFinder(AUTHOR, STRING, target_author, STANDARD_INFO);
         } else if (select == 5) {
             printf("\n전체 검색 결과\n");
-            book_finder(SEARCH_ALL_BOOK);
+            result_count = BookFinder(SEARCH_ALL_BOOK);
         } else if (select == 6) {
             break;
         }
+
+        if (result_count == 0) fprintf(stderr, "\n검색 결과가 없습니다.\n");
     }
 }
 
-void time_to_date(time_t t) {
+void PrintDate(time_t t) {
     struct tm *t_struct = localtime(&t);
     char *wday[7] = {"일", "월", "화", "수", "목", "금", "토"};
 
     printf("%d년 %d월 %d일 %s요일\n", t_struct->tm_year + 1900, t_struct->tm_mon + 1, t_struct->tm_mday, wday[t_struct->tm_wday]);
 }
 
-void client_borrow_info(int id) {
-    for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
+void ClientBorrowInfo(int id) {
+    for (struct BorrowNode *i = borrow_list_head; i != NULL; i = i->next) {
         if (i->data.client_id == id) {
-            book_finder(BOOK_ID, INT, i->data.book_id, BORROW_INFO); // BORROW_INFO: 도서번호, 도서명 출력
+            BookFinder(BOOK_ID, INT, i->data.book_id, BORROW_INFO); // BORROW_INFO: 도서번호, 도서명 출력
 
             /* // localtime() 함수는 내부에서 static 메모리를 사용하므로 여러번 호출하면 서로의 값이 덮어씌워져버린다.
             struct tm *borrow_tm = localtime(&(i->data.borrow_date));
@@ -381,15 +422,15 @@ void client_borrow_info(int id) {
             printf("대여일자 : %.4d. %.2d. %.2d.\n", borrow_tm->tm_year + 1900, borrow_tm->tm_mon + 1, borrow_tm->tm_mday);
             printf("반납일자 : %.4d. %.2d. %.2d.\n", return_tm->tm_year + 1900, return_tm->tm_mon + 1, return_tm->tm_mday); */
             printf("대여일자 : ");
-            time_to_date(i->data.borrow_date);
+            PrintDate(i->data.borrow_date);
             printf("반납일자 : ");
-            time_to_date(i->data.return_date);
+            PrintDate(i->data.return_date);
         }
     }
 }
 
-_Bool is_client_borrowed(int id) {
-    for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
+_Bool IsClientBorrowed(int id) {
+    for (struct BorrowNode *i = borrow_list_head; i != NULL; i = i->next) {
         if (i->data.client_id == id) {
             return 1;
         }
@@ -398,7 +439,11 @@ _Bool is_client_borrowed(int id) {
     return 0;
 }
 
-void change_password(struct client_node *user) {
+_Bool IsBookBorrowed(int id) {
+
+}
+
+void ChangePassword(struct ClientNode *user) {
     char verify[20];
     printf("\n현재 비밀번호: ");
     getchar();
@@ -410,32 +455,32 @@ void change_password(struct client_node *user) {
         printf("새 비밀번호: ");
         getchar();
         scanf("%[^\n]", user->data.password);
-        sync_file(CLIENT);
+        SyncFile(CLIENT);
 
         printf("비밀번호 변경이 완료되었습니다.\n");
     }
 }
 
-void change_address(struct client_node *user) {
+void ChangeAddress(struct ClientNode *user) {
     printf("\n새 주소: ");
     getchar();
     scanf("%[^\n]", user->data.address);
-    sync_file(CLIENT);
+    SyncFile(CLIENT);
 
     printf("주소 변경이 완료되었습니다.\n");
 }
 
-void change_phone_number(struct client_node *user) {
+void ChangePhoneNumber(struct ClientNode *user) {
     printf("\n새 전화번호: ");
     getchar();
     scanf("%[^\n]", user->data.phone_number);
-    sync_file(CLIENT);
+    SyncFile(CLIENT);
 
     printf("전화번호 변경이 완료되었습니다.\n");
 }
 
-void account_setting(int id) {
-    struct client_node *user;
+void AccountSetting(int id) {
+    struct ClientNode *user;
     for (user = client_list_head; user != NULL; user = user->next) {
         if (user->data.id == id) break;
     }
@@ -449,35 +494,35 @@ void account_setting(int id) {
         scanf("%d", &select);
 
         if (select == 1) {
-            change_password(user);
+            ChangePassword(user);
         } else if (select == 2) {
-            change_address(user);
+            ChangeAddress(user);
         } else if (select == 3) {
-            change_phone_number(user);
+            ChangePhoneNumber(user);
         } else if (select == 4) {
             break;
         }
     }
 
-    sync_file(CLIENT);
+    SyncFile(CLIENT);
 }
 
-_Bool delete_account(int id) {
+_Bool DeleteAccount(int id) {
     char y_n;
     printf("정말 탈퇴하시겠습니까? (y / n) : ");
     getchar();
     scanf("%c", &y_n);
     
-    if (is_client_borrowed(id)) {
+    if (IsClientBorrowed(id)) {
         fprintf(stderr, "대여중인 책이 있어서 탈퇴할 수 없습니다.\n");
         return 0;
     } else if (y_n == 'n') return 0;
     
-    struct client_node *user, *prev = NULL;
+    struct ClientNode *user, *prev = NULL;
     for (user = client_list_head; user != NULL; user = user->next) {
         if (user->data.id == id) {
-            erase(CLIENT, prev);
-            sync_file(CLIENT);
+            Erase(CLIENT, prev);
+            SyncFile(CLIENT);
             printf("탈퇴가 완료되었습니다.\n");
             return 1;
         }
@@ -487,7 +532,7 @@ _Bool delete_account(int id) {
     return -1;
 }
 
-void user_menu(int id) {
+void UserMenu(int id) {
     while (1) {
         printf("\n>> 회원 메뉴 <<\n");
         printf("1. 도서 검색\t\t2. 내 대여 목록\n3. 개인정보 수정\t4. 회원 탈퇴\n5. 로그아웃\t\t6. 프로그램 종료\n\n");
@@ -497,13 +542,13 @@ void user_menu(int id) {
         scanf("%d", &select);
 
         if (select == 1) {
-            search_book();
+            SearchBook();
         } else if (select == 2) {
-            client_borrow_info(id);
+            ClientBorrowInfo(id);
         } else if (select == 3) {
-            account_setting(id);
+            AccountSetting(id);
         } else if (select == 4) {
-            if (delete_account(id)) return;
+            if (DeleteAccount(id)) return;
         } else if (select == 5) {
             return;
         } else if (select == 6) {
@@ -513,8 +558,8 @@ void user_menu(int id) {
 }
 
 // administrator
-void add_book() {
-    struct book book_data;
+void AddBook() {
+    struct Book book_data;
 
     printf(">> 도서 등록 <<\n");
 
@@ -539,7 +584,7 @@ void add_book() {
 
     book_data.available = 'Y';
 
-    struct book_node* last_node;
+    struct BookNode* last_node;
     for (last_node = book_list_head; last_node->next != NULL; last_node = last_node->next);
 
     book_data.id = last_node->data.id + 1;
@@ -551,15 +596,15 @@ void add_book() {
 
     getchar();
     if (getchar() == 'Y') {
-        push_front(BOOK, &book_data);
-        sort_list(BOOK);
-        sync_file(BOOK);
+        PushFront(BOOK, &book_data);
+        SortList(BOOK);
+        SyncFile(BOOK);
 
         printf("등록이 완료되었습니다.\n");
     }
 }
 
-void delete_book() {
+void DeleteBook() {
     printf(">> 도서 삭제 <<\n");
     printf("1. 도서명 검색\t\t2. ISBN 검색\n\n");
 
@@ -567,7 +612,7 @@ void delete_book() {
     printf("검색 번호를 입력하세요: ");
     scanf("%d", &select);
 
-    struct book book_info;
+    struct Book book_info;
     _Bool is_first = 1;
 
     if (select == 1) {
@@ -579,7 +624,7 @@ void delete_book() {
         printf("\n\n>> 검색 결과 <<\n");
         printf("도서번호: ");
 
-        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+        for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
             if (strcmp(i->data.name, target_name) == 0) {
                 if (is_first) {
                     book_info = i->data;
@@ -599,7 +644,7 @@ void delete_book() {
         printf("\n\n>> 검색 결과 <<\n");
         printf("도서 번호: ");
 
-        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+        for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
             if (i->data.ISBN == target_ISBN) {
                 if (is_first) {
                     book_info = i->data;
@@ -628,14 +673,14 @@ void delete_book() {
     printf("삭제할 도서의 번호를 입력하세요: ");
     scanf("%d", &erasing_book_id);
 
-    struct book_node *i, *prev;
+    struct BookNode *i, *prev;
     for (i = book_list_head, prev = NULL; i != NULL; i = i->next) {
         if (i->data.id == erasing_book_id) {
             if (i->data.available == 'N') {
                 printf("이 도서는 삭제할 수 없습니다.\n");
             } else {
-                erase(BOOK, prev);
-                sync_file(BOOK);
+                Erase(BOOK, prev);
+                SyncFile(BOOK);
                 printf("도서가 삭제되었습니다.\n");
             }
             return;
@@ -646,7 +691,7 @@ void delete_book() {
     if (i == NULL) printf("해당 도서가 존재하지 않습니다.\n");
 }
 
-void borrow_book() {
+void BorrowBook() {
     printf("\n>> 도서 삭제 <<\n");
     printf("1. 도서명 검색\t\t2. ISBN 검색\n\n");
 
@@ -654,7 +699,7 @@ void borrow_book() {
     printf("검색 번호를 입력하세요: ");
     scanf("%d", &select);
 
-    struct book book_info;
+    struct Book book_info;
     _Bool is_first = 1;
 
     if (select == 1) {
@@ -666,7 +711,7 @@ void borrow_book() {
         printf("\n\n>> 검색 결과 <<\n");
         printf("도서번호: ");
 
-        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+        for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
             if (strcmp(i->data.name, target_name) == 0) {
                 if (is_first) {
                     book_info = i->data;
@@ -686,7 +731,7 @@ void borrow_book() {
         printf("\n\n>> 검색 결과 <<\n");
         printf("도서 번호: ");
 
-        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+        for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
             if (i->data.ISBN == target_ISBN) {
                 if (is_first) {
                     book_info = i->data;
@@ -715,9 +760,9 @@ void borrow_book() {
     printf("학번을 입력하세요: ");
     scanf("%d", &client_id);
 
-    struct client_node *target_client_node;
+    struct ClientNode *target_client_node;
 
-    for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+    for (struct ClientNode *i = client_list_head; i != NULL; i = i->next) {
         if (i->data.id == client_id) {
             target_client_node = i;
             break;
@@ -731,9 +776,9 @@ void borrow_book() {
     printf("도서번호를 입력하세요: ");
     scanf("%d", &book_id);
 
-    struct book_node *target_book_node;
+    struct BookNode *target_book_node;
 
-    for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+    for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
         if (i->data.id == book_id) {
             target_book_node = i;
             break;
@@ -753,7 +798,7 @@ void borrow_book() {
     
 
     // BORROW: 대여 목록 업데이트
-    struct borrow borrow_data;
+    struct Borrow borrow_data;
     borrow_data.client_id = target_client_node->data.id;
     borrow_data.book_id = target_book_node->data.id;
 
@@ -764,24 +809,24 @@ void borrow_book() {
     if (t->tm_wday == 0) now += 24 * 60 * 60; // 일요일이면 반납기간을 하루 더 주기 (31일)
     borrow_data.return_date = now; // 반납해야할 날 기록
 
-    push_front(BORROW, &borrow_data);
-    sort_list(BORROW);
-    sync_file(BORROW);
+    PushFront(BORROW, &borrow_data);
+    SortList(BORROW);
+    SyncFile(BORROW);
 
     // BOOK: 대여 가능 여부 업데이트
     target_book_node->data.available = 'N';
-    sync_file(BOOK);
+    SyncFile(BOOK);
 
     printf("\n도서가 대여 되었습니다.\n");
 }
 
-void return_book() {
+void ReturnBook() {
     int client_id;
     printf("학번을 입력하세요: ");
     scanf("%d", &client_id);
 
     printf("\n>> 회원의 대여 목록 <<\n");
-    client_borrow_info(client_id);
+    ClientBorrowInfo(client_id);
 
     int book_id;
     printf("\n반납할 도서번호를 입력하세요: ");
@@ -792,9 +837,9 @@ void return_book() {
     if (getchar() == 'N') return;
 
     // BORROW 데이터에 반납 반영하기
-    struct borrow_node *prev = NULL;
+    struct BorrowNode *prev = NULL;
 
-    for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
+    for (struct BorrowNode *i = borrow_list_head; i != NULL; i = i->next) {
         if (i->data.book_id == book_id) break;
         else if (i->next == NULL && i->data.book_id != book_id) {
             fprintf(stderr, "\n도서가 존재하지 않습니다.\n");
@@ -803,33 +848,33 @@ void return_book() {
         prev = i;
     }
 
-    erase(BORROW, prev);
-    sync_file(BORROW);
+    Erase(BORROW, prev);
+    SyncFile(BORROW);
 
     // BOOK 데이터에 반납 반영하기
-    for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+    for (struct BookNode *i = book_list_head; i != NULL; i = i->next) {
         if (i->data.id == book_id) {
             i->data.available = 'Y';
             break;
         }
     }
 
-    sync_file(BOOK);
+    SyncFile(BOOK);
 
     printf("\n도서가 반납 되었습니다.\n");
 }
 
-void print_client_info(struct client client) {
+void PrintClientInfo(struct Client client) {
     printf("학번 : %d\n", client.id);
     printf("이름 : %s\n", client.name);
     printf("주소 : %s\n", client.address);
     printf("전화번호 : %s\n", client.phone_number);
 }
 
-void client_finder(enum e_find_client_by by, ...) { // (search by, target's data type, target)
+void ClientFinder(enum FindClientBy by, ...) { // (search by, target's data type, target)
     if (by == SEARCH_ALL_CLIENT) { // 3. 전체검색
-        for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
-            print_client_info(i->data);
+        for (struct ClientNode *i = client_list_head; i != NULL; i = i->next) {
+            PrintClientInfo(i->data);
             putchar('\n');
         }
         return;
@@ -838,7 +883,7 @@ void client_finder(enum e_find_client_by by, ...) { // (search by, target's data
     // 1. 이름 검색, 2. 학번 검색
     va_list ap;
     va_start(ap, by);
-    enum e_data_type type = va_arg(ap, enum e_data_type);
+    enum DataType type = va_arg(ap, enum DataType);
     
     int int_target;
     char *str_target;
@@ -848,20 +893,20 @@ void client_finder(enum e_find_client_by by, ...) { // (search by, target's data
     else if (type == STRING)
         str_target = va_arg(ap, char *);
     
-    for (struct client_node *i = client_list_head; i != NULL; i = i -> next) {
+    for (struct ClientNode *i = client_list_head; i != NULL; i = i -> next) {
         if (by == CLIENT_NAME) {
             if (strcmp(i->data.name, str_target) == 0)
-                print_client_info(i->data);
+                PrintClientInfo(i->data);
         } else if (by == CLIENT_ID) {
             if (i->data.id == int_target) {
-                print_client_info(i->data);
+                PrintClientInfo(i->data);
                 break; // 같은 학번이 여러 개일 수 없다.
             }
         }
     }
 }
 
-void search_client() {
+void SearchClient() {
     while (1) {
         printf("\n>> 회원 목록 <<\n");
         printf("1. 이름 검색\t\t2. 학번 검색\n3. 전체 검색\t\t4. 이전 메뉴\n\n");
@@ -876,23 +921,23 @@ void search_client() {
             getchar();
             scanf("%[^\n]", target_name);
 
-            client_finder(CLIENT_NAME, STRING, target_name);
+            ClientFinder(CLIENT_NAME, STRING, target_name);
         } else if (select == 2) {
             int target_id;
             printf("\n회원의 학번을 입력하세요: ");
             scanf("%d", &target_id);
 
-            client_finder(CLIENT_ID, INT, target_id);
+            ClientFinder(CLIENT_ID, INT, target_id);
         } else if (select == 3) {
             printf("\n전체 검색 결과\n");
-            client_finder(SEARCH_ALL_CLIENT);
+            ClientFinder(SEARCH_ALL_CLIENT);
         } else if (select == 4) {
             break;
         }
     }
 }
 
-void admin_menu() {
+void AdminMenu() {
     while (1) {
         printf("\n>> 관리자 메뉴 <<\n");
         printf("1. 도서 등록\t\t2. 도서 삭제\n3. 도서 대여\t\t4. 도서 반납\n5. 도서 검색\t\t6. 회원 목록\n7. 로그아웃\t\t8. 프로그램 종료\n\n");
@@ -902,17 +947,17 @@ void admin_menu() {
         scanf("%d", &select);
 
         if (select == 1) {
-            add_book();
+            AddBook();
         } else if (select == 2) {
-            delete_book();
+            DeleteBook();
         } else if (select == 3) {
-            borrow_book();
+            BorrowBook();
         } else if (select == 4) {
-            return_book();
+            ReturnBook();
         } else if (select == 5) {
-            search_book();
+            SearchBook();
         } else if (select == 6) {
-            search_client();
+            SearchClient();
         } else if (select == 7) {
             return;
         } else if (select == 8) {
@@ -922,11 +967,11 @@ void admin_menu() {
 }
 
 // account
-void signup() {
+void SignUp() {
 	printf("\n>> 회원 가입 <<\n");
 	printf("학번, 비밀번호, 이름, 주소, 전화번호를 입력하세요.\n\n");
 
-	struct client client_data;
+	struct Client client_data;
 
 	printf("학번: ");
 	scanf("%d", &client_data.id);
@@ -946,21 +991,21 @@ void signup() {
     getchar();
 	scanf("%[^\n]", client_data.phone_number);
 
-	for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+	for (struct ClientNode *i = client_list_head; i != NULL; i = i->next) {
 		if (i->data.id == client_data.id) {
             fprintf(stderr, "\n이미 동일한 학번의 계정이 존재합니다.\n\n");
             return;
         }
 	}
 
-	push_front(CLIENT, &client_data);
-    sort_list(CLIENT);
-	sync_file(CLIENT);
+	PushFront(CLIENT, &client_data);
+    SortList(CLIENT);
+	SyncFile(CLIENT);
 
 	printf("\n회원가입이 되셨습니다.\n\n");
 }
 
-void login() {
+void LogIn() {
     char id[9], password[20];
 
 	printf("\n>> 로그인 <<\n");
@@ -970,13 +1015,13 @@ void login() {
 	scanf("%s", password);
 
 	if (strcmp("admin", id) == 0 && strcmp("yuoung14", password) == 0) {
-        admin_menu();
+        AdminMenu();
         return;
     }
 
-    for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+    for (struct ClientNode *i = client_list_head; i != NULL; i = i->next) {
         if (i->data.id == atoi(id) && strcmp(i->data.password, password) == 0) {
-            user_menu(i->data.id);
+            UserMenu(i->data.id);
             return;
         }
     }
@@ -985,8 +1030,8 @@ void login() {
 }
 
 int main() {
-    initialize_lists();
-    sort_list(ALL_FILE_OR_STRUCT);
+    InitializeLists();
+    SortList(ALL_FILE_OR_STRUCT);
 
 	while (1) {
         printf(">> 도서 관리 프로그램 <<\n");
@@ -997,9 +1042,9 @@ int main() {
         scanf("%d", &select);
 
 		if (select == 1) {
-			signup();
+			SignUp();
 		} else if (select == 2) {
-			login();
+			LogIn();
 		} else if (select == 3) {
 			break;
 		}
