@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <stdarg.h>
+#include <time.h>
 
 enum e_file_or_struct_type { CLIENT, BOOK, BORROW, ALL_FILE_OR_STRUCT };
 
-enum e_search_book_by { ID, NAME, PUBLISHER, AUTHOR, ISBN, LOCATION, AVAILABLE, SEARCH_ALL };
+enum e_find_book_by { BOOK_ID, BOOK_NAME, PUBLISHER, AUTHOR, ISBN, LOCATION, AVAILABLE, SEARCH_ALL_BOOK };
 enum e_data_type { INT, LONGLONG, STRING };
 enum e_search_book_mode { STANDARD_INFO, BORROW_INFO };
+enum e_find_client_by { CLIENT_NAME, CLIENT_ID, SEARCH_ALL_CLIENT };
 
 FILE *client_fp, *book_fp, *borrow_fp;
 
@@ -71,7 +72,7 @@ struct book {
 };
 
 struct borrow {
-    int user_id;
+    int client_id;
     int book_id;
     time_t borrow_date;
     time_t return_date;
@@ -174,7 +175,7 @@ void initialize_lists() {
     }
 
     struct borrow borrow_data;
-    while (fscanf(borrow_fp, "%d | %d | %ld | %ld", &borrow_data.user_id, &borrow_data.book_id, &borrow_data.borrow_date, &borrow_data.return_date) != EOF) {
+    while (fscanf(borrow_fp, "%d | %d | %ld | %ld", &borrow_data.client_id, &borrow_data.book_id, &borrow_data.borrow_date, &borrow_data.return_date) != EOF) {
 		push_front(BORROW, &borrow_data);
     }
 
@@ -220,7 +221,7 @@ void print_list(enum e_file_or_struct_type target_list) {
         }
     } else if (target_list == BORROW) {
         for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
-            printf("%d | %d | %ld | %ld\n", i->data.user_id, i->data.book_id, i->data.borrow_date, i->data.return_date);
+            printf("%d | %d | %ld | %ld\n", i->data.client_id, i->data.book_id, i->data.borrow_date, i->data.return_date);
         }
     } else if (target_list == ALL_FILE_OR_STRUCT) {
 		print_list(CLIENT);
@@ -246,7 +247,7 @@ void sync_file(enum e_file_or_struct_type target_file) {
 		}
 	} else if (target_file == BORROW) {
 		for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
-			fprintf(borrow_fp, "%d | %d | %ld | %ld\n", i->data.user_id, i->data.book_id, i->data.borrow_date, i->data.return_date);
+			fprintf(borrow_fp, "%d | %d | %ld | %ld\n", i->data.client_id, i->data.book_id, i->data.borrow_date, i->data.return_date);
 		}
 	}
 
@@ -262,8 +263,8 @@ void print_book_info(struct book book, enum e_search_book_mode mode) {
         printf("ISBN: %lld\n", book.ISBN);
         printf("소장처: %s\n", book.location);
         printf("대여가능 여부: %c(%d/%d)\n", book.available, 0, 0); // TODO: 대여된 총 권수, 보유하고 있는 총 권수 어떻게 알아내지
-        printf("** Y는 대여가능, N은 대여불가를 의미\n");
-        printf("** (x/y) : (대여된 총 권수 / 보유하고 있는 총 권수)\n");
+        /* printf("** Y는 대여가능, N은 대여불가를 의미\n");
+        printf("** (x/y) : (대여된 총 권수 / 보유하고 있는 총 권수)\n"); */
     } else if (mode == BORROW_INFO) {
         printf("\n도서번호 : %d\n", book.id);
         printf("도서명 : %s\n", book.name);
@@ -271,8 +272,8 @@ void print_book_info(struct book book, enum e_search_book_mode mode) {
     }
 }
 
-void find_book(enum e_search_book_by by, ...) { // (search by, target's data type, target)
-    if (by == SEARCH_ALL) { // 5. 전체검색
+void book_finder(enum e_find_book_by by, ...) { // (find by, target's data type, target)
+    if (by == SEARCH_ALL_BOOK) { // 5. 전체검색
         for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
             print_book_info(i->data, STANDARD_INFO);
         }
@@ -298,7 +299,7 @@ void find_book(enum e_search_book_by by, ...) { // (search by, target's data typ
     enum e_search_book_mode mode = va_arg(ap, enum e_search_book_mode);
     
     for (struct book_node *i = book_list_head; i != NULL; i = i -> next) {
-        if (by == NAME) {
+        if (by == BOOK_NAME) {
             if (strcmp(i->data.name, str_target) == 0)
                 print_book_info(i->data, mode);
         } else if (by == PUBLISHER) {
@@ -310,93 +311,106 @@ void find_book(enum e_search_book_by by, ...) { // (search by, target's data typ
         } else if (by == AUTHOR) {
             if (strcmp(i->data.author, str_target) == 0)
                 print_book_info(i->data, mode);
-        } else if (by == ID) {
+        } else if (by == BOOK_ID) {
             if (i->data.id == int_target)
                 print_book_info(i->data, mode);
         }
     }
 }
 
-void book_search() {
+void search_book() {
     while (1) {
         printf("\n>> 도서 검색 <<\n");
-        printf("1. 도서명 검색\t\t2. 출판사 검색\n3. ISBN 검색\t\t4. 저자명 검색\n5. 전체 검색\t\t6. 이전메뉴\n\n");
+        printf("1. 도서명 검색\t\t2. 출판사 검색\n3. ISBN 검색\t\t4. 저자명 검색\n5. 전체 검색\t\t6. 이전 메뉴\n\n");
         
         int select;
         printf("번호를 선택하세요: ");
         scanf("%d", &select);
 
-        while (getchar() != '\n');
-
         if (select == 1) {
             char target_name[50];
             printf("\n도서명을 입력하세요: ");
+            getchar();
             scanf("%[^\n]", target_name);
 
-            find_book(NAME, STRING, target_name, STANDARD_INFO);
+            book_finder(BOOK_NAME, STRING, target_name, STANDARD_INFO);
         } else if (select == 2) {
             char target_publisher[20];
             printf("\n출판사를 입력하세요: ");
+            getchar();
             scanf("%[^\n]", target_publisher);
 
-            find_book(PUBLISHER, STRING, target_publisher, STANDARD_INFO);
+            book_finder(PUBLISHER, STRING, target_publisher, STANDARD_INFO);
         } else if (select == 3) {
             long long target_ISBN;
             printf("\nISBN을 입력하세요: ");
             scanf("%lld", &target_ISBN);
 
-            find_book(ISBN, LONGLONG, target_ISBN, STANDARD_INFO);
+            book_finder(ISBN, LONGLONG, target_ISBN, STANDARD_INFO);
         } else if (select == 4) {
             char target_author[20];
             printf("\n저자명을 입력하세요: ");
+            getchar();
             scanf("%[^\n]", target_author);
 
-            find_book(AUTHOR, STRING, target_author, STANDARD_INFO);
+            book_finder(AUTHOR, STRING, target_author, STANDARD_INFO);
         } else if (select == 5) {
             printf("\n전체 검색 결과\n");
-            find_book(SEARCH_ALL);
+            book_finder(SEARCH_ALL_BOOK);
         } else if (select == 6) {
             break;
         }
     }
 }
 
-void my_borrow_info(int id) {
-    open_file(BORROW, "r");
+void time_to_date(time_t t) {
+    struct tm *t_struct = localtime(&t);
+    char *wday[7] = {"일", "월", "화", "수", "목", "금", "토"};
 
+    printf("%d년 %d월 %d일 %s요일\n", t_struct->tm_year + 1900, t_struct->tm_mon + 1, t_struct->tm_mday, wday[t_struct->tm_wday]);
+}
+
+void client_borrow_info(int id) {
     for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
-        if (i->data.user_id == id) {
-            find_book(ID, INT, i->data.book_id, BORROW_INFO);
+        if (i->data.client_id == id) {
+            book_finder(BOOK_ID, INT, i->data.book_id, BORROW_INFO); // BORROW_INFO: 도서번호, 도서명 출력
 
             /* // localtime() 함수는 내부에서 static 메모리를 사용하므로 여러번 호출하면 서로의 값이 덮어씌워져버린다.
             struct tm *borrow_tm = localtime(&(i->data.borrow_date));
             struct tm *return_tm = localtime(&(i->data.return_date));
             printf("대여일자 : %.4d. %.2d. %.2d.\n", borrow_tm->tm_year + 1900, borrow_tm->tm_mon + 1, borrow_tm->tm_mday);
             printf("반납일자 : %.4d. %.2d. %.2d.\n", return_tm->tm_year + 1900, return_tm->tm_mon + 1, return_tm->tm_mday); */
-            struct tm *time_data;
+            printf("대여일자 : ");
+            time_to_date(i->data.borrow_date);
+            printf("반납일자 : ");
+            time_to_date(i->data.return_date);
+        }
+    }
+}
 
-            time_data = localtime(&(i->data.borrow_date));
-            printf("대여일자 : %.4d. %.2d. %.2d.\n", time_data->tm_year + 1900, time_data->tm_mon + 1, time_data->tm_mday);
-            time_data = localtime(&(i->data.return_date));
-            printf("반납일자 : %.4d. %.2d. %.2d.\n", time_data->tm_year + 1900, time_data->tm_mon + 1, time_data->tm_mday);
+_Bool is_client_borrowed(int id) {
+    for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
+        if (i->data.client_id == id) {
+            return 1;
         }
     }
 
-    close_file(BORROW);
+    return 0;
 }
 
 void change_password(struct client_node *user) {
     char verify[20];
     printf("\n현재 비밀번호: ");
-    while (getchar() != '\n');
+    getchar();
     scanf("%[^\n]", verify);
 
     if (strcmp(verify, user->data.password) != 0) {
         fprintf(stderr, "현재 비밀번호와 일치하지 않습니다.\n");
     } else {
         printf("새 비밀번호: ");
-        while (getchar() != '\n');
+        getchar();
         scanf("%[^\n]", user->data.password);
+        sync_file(CLIENT);
 
         printf("비밀번호 변경이 완료되었습니다.\n");
     }
@@ -404,16 +418,18 @@ void change_password(struct client_node *user) {
 
 void change_address(struct client_node *user) {
     printf("\n새 주소: ");
-    while (getchar() != '\n');
+    getchar();
     scanf("%[^\n]", user->data.address);
+    sync_file(CLIENT);
 
     printf("주소 변경이 완료되었습니다.\n");
 }
 
 void change_phone_number(struct client_node *user) {
     printf("\n새 전화번호: ");
-    while (getchar() != '\n');
+    getchar();
     scanf("%[^\n]", user->data.phone_number);
+    sync_file(CLIENT);
 
     printf("전화번호 변경이 완료되었습니다.\n");
 }
@@ -448,16 +464,20 @@ void account_setting(int id) {
 
 _Bool delete_account(int id) {
     char y_n;
-    fprintf(stderr, "정말 탈퇴하시겠습니까? (y / n) : ");
-    while (getchar() != '\n');
+    printf("정말 탈퇴하시겠습니까? (y / n) : ");
+    getchar();
     scanf("%c", &y_n);
     
-    if (y_n == 'n') return 0;
+    if (is_client_borrowed(id)) {
+        fprintf(stderr, "대여중인 책이 있어서 탈퇴할 수 없습니다.\n");
+        return 0;
+    } else if (y_n == 'n') return 0;
     
     struct client_node *user, *prev = NULL;
     for (user = client_list_head; user != NULL; user = user->next) {
         if (user->data.id == id) {
             erase(CLIENT, prev);
+            sync_file(CLIENT);
             printf("탈퇴가 완료되었습니다.\n");
             return 1;
         }
@@ -477,9 +497,9 @@ void user_menu(int id) {
         scanf("%d", &select);
 
         if (select == 1) {
-            book_search();
+            search_book();
         } else if (select == 2) {
-            my_borrow_info(id);
+            client_borrow_info(id);
         } else if (select == 3) {
             account_setting(id);
         } else if (select == 4) {
@@ -494,45 +514,52 @@ void user_menu(int id) {
 
 // administrator
 void add_book() {
-    struct book* book_data = (struct book*)malloc(sizeof(struct book));
+    struct book book_data;
 
     printf(">> 도서 등록 <<\n");
+
     printf("도서명: ");
-    scanf("%s", book_data->name);
+    getchar();
+    scanf("%[^\n]", book_data.name);
+
     printf("출판사: ");
-    scanf("%s", book_data->publisher);
+    getchar();
+    scanf("%[^\n]", book_data.publisher);
+
     printf("저자명: ");
-    scanf("%s", book_data->author);
+    getchar();
+    scanf("%[^\n]", book_data.author);
+
     printf("ISBN: ");
-    scanf("%lld", &(book_data->ISBN));
+    scanf("%lld", &(book_data.ISBN));
+
     printf("소장처: ");
-    scanf("%s", book_data->location);
+    getchar();
+    scanf("%[^\n]", book_data.location);
 
-    book_data->available = 'Y';
+    book_data.available = 'Y';
 
-    struct book_node* lastNode = book_list_head;
-    while (lastNode->next != NULL)
-        lastNode = lastNode->next;
+    struct book_node* last_node;
+    for (last_node = book_list_head; last_node->next != NULL; last_node = last_node->next);
 
-    book_data->id = (lastNode->data.id) + 1;
+    book_data.id = last_node->data.id + 1;
+
     printf("\n자동입력 사항\n\n");
-    printf("대여가능 여부: %c\n", book_data->available);
-    printf("도서번호: %d\n\n", book_data->id);
+    printf("대여가능 여부: %c\n", book_data.available);
+    printf("도서번호: %d\n\n", book_data.id);
     printf("등록하시겠습니까? ");
 
+    getchar();
     if (getchar() == 'Y') {
-        push_front(BOOK, book_data);  // 책 연결 리스트에 추가
-        sort_list(BOOK);                    // 책 리스트 정렬
-        sync_file(BOOK);                    // 파일에도 동기화
+        push_front(BOOK, &book_data);
+        sort_list(BOOK);
+        sync_file(BOOK);
 
         printf("등록이 완료되었습니다.\n");
     }
 }
 
 void delete_book() {
-    int erasing_book_id;
-    struct book memo;
-
     printf(">> 도서 삭제 <<\n");
     printf("1. 도서명 검색\t\t2. ISBN 검색\n\n");
 
@@ -540,119 +567,357 @@ void delete_book() {
     printf("검색 번호를 입력하세요: ");
     scanf("%d", &select);
 
-    struct book_node *tmp = book_list_head;
+    struct book book_info;
+    _Bool is_first = 1;
 
-    switch (select) {
-        case 1:
-            char search_by_name[50];
-            printf("도서명을 입력하세요: ");
-            scanf("%s", search_by_name);
+    if (select == 1) {
+        char target_name[50];
+        printf("도서명을 입력하세요: ");
+        getchar();
+        scanf("%[^\n]", target_name);
 
-            printf("\n\n>>검색 결과 <<\n");
-            printf("도서번호: ");
+        printf("\n\n>> 검색 결과 <<\n");
+        printf("도서번호: ");
 
-            while (1) {  // 검색된 책 번호 일렬로 출력
-                if (strcmp(tmp->data.name, search_by_name) == 0) {
-                    printf("%d(삭제 가능 여부 : %c)", tmp->data.id, tmp->data.available);
-                    memo = tmp->data;
+        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+            if (strcmp(i->data.name, target_name) == 0) {
+                if (is_first) {
+                    book_info = i->data;
+                    is_first = 0;
+                } else {
+                    printf(", ");
                 }
-                tmp = tmp->next;
-                if (tmp == NULL) break;
 
-                printf(", ");  // 쉼표처리
+                printf("%d(삭제 가능 여부 : %c)", i->data.id, i->data.available);
             }
+        }
+    } else if (select == 2) {
+        long long target_ISBN;
+        printf("ISBN을 입력하세요: ");
+        scanf("%lld", &target_ISBN);
 
-            printf("\n도서명: %s\n", memo.name);
-            printf("출판사: %s\n", memo.publisher);
-            printf("저자명: %s\n", memo.author);
-            printf("ISBN: %lld\n", memo.ISBN);
-            printf("소장처: %s\n\n", memo.location);
+        printf("\n\n>> 검색 결과 <<\n");
+        printf("도서 번호: ");
 
-            printf("삭제할 도서의 번호를 입력하세요: ");
-            scanf("%d", &erasing_book_id);
+        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+            if (i->data.ISBN == target_ISBN) {
+                if (is_first) {
+                    book_info = i->data;
+                    is_first = 0;
+                } else {
+                    printf(", ");
+                }
 
-            tmp = book_list_head;
-            while (tmp->data.id != erasing_book_id && tmp->next != NULL) tmp = tmp->next;
+                printf("%d(삭제 가능 여부 : %c)", i->data.id, i->data.available);
+            }
+        }
+    }
 
-            if (tmp->next == NULL && tmp->data.id != erasing_book_id)
-                printf("해당 도서가 존재하지 않습니다.\n");
-            else if (tmp->data.available == 'N') {
+    if (is_first == 1) {
+        printf("\n도서관에서 제공하지 않는 도서입니다.\n");
+        return;
+    }
+
+    printf("\n도서명: %s\n", book_info.name);
+    printf("출판사: %s\n", book_info.publisher);
+    printf("저자명: %s\n", book_info.author);
+    printf("ISBN: %lld\n", book_info.ISBN);
+    printf("소장처: %s\n\n", book_info.location);
+
+    int erasing_book_id;
+    printf("삭제할 도서의 번호를 입력하세요: ");
+    scanf("%d", &erasing_book_id);
+
+    struct book_node *i, *prev;
+    for (i = book_list_head, prev = NULL; i != NULL; i = i->next) {
+        if (i->data.id == erasing_book_id) {
+            if (i->data.available == 'N') {
                 printf("이 도서는 삭제할 수 없습니다.\n");
             } else {
-                erase(BOOK, tmp);
+                erase(BOOK, prev);
+                sync_file(BOOK);
                 printf("도서가 삭제되었습니다.\n");
-                sync_file(BOOK);
             }
+            return;
+        }
+        prev = i;
+    }
 
-            break;
-        case 2:
-            long long search_by_ISBN;
-            printf("ISBN을 입력하세요: ");
-            scanf("%lld", &search_by_ISBN);
+    if (i == NULL) printf("해당 도서가 존재하지 않습니다.\n");
+}
 
-            printf("\n\n>>검색 결과 <<\n");
-            printf("도서번호: ");
+void borrow_book() {
+    printf("\n>> 도서 삭제 <<\n");
+    printf("1. 도서명 검색\t\t2. ISBN 검색\n\n");
 
-            while (tmp->next != NULL) {  // 검색된 책 번호 일렬로 출력
-                if (tmp->data.ISBN == search_by_ISBN) {
-                    printf("%d(삭제 가능 여부 : %c)", tmp->data.id, tmp->data.available);
-                    memo = tmp->data;
-                    break;
+    int select;
+    printf("검색 번호를 입력하세요: ");
+    scanf("%d", &select);
+
+    struct book book_info;
+    _Bool is_first = 1;
+
+    if (select == 1) {
+        char target_name[50];
+        printf("도서명을 입력하세요: ");
+        getchar();
+        scanf("%[^\n]", target_name);
+
+        printf("\n\n>> 검색 결과 <<\n");
+        printf("도서번호: ");
+
+        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+            if (strcmp(i->data.name, target_name) == 0) {
+                if (is_first) {
+                    book_info = i->data;
+                    is_first = 0;
+                } else {
+                    printf(", ");
                 }
-                tmp = tmp->next;
+
+                printf("%d(대여 가능 여부 : %c)", i->data.id, i->data.available);
             }
-            printf("\n도서명: %s\n", memo.name);
-            printf("출판사: %s\n", memo.publisher);
-            printf("저자명: %s\n", memo.author);
-            printf("ISBN: %lld\n", memo.ISBN);
-            printf("소장처: %s\n\n", memo.location);
+        }
+    } else if (select == 2) {
+        long long target_ISBN;
+        printf("ISBN을 입력하세요: ");
+        scanf("%lld", &target_ISBN);
 
-            printf("삭제할 도서의 번호를 입력하세요: ");
-            scanf("%d", &erasing_book_id);
+        printf("\n\n>> 검색 결과 <<\n");
+        printf("도서 번호: ");
 
-            tmp = book_list_head;
-            while (tmp->data.id != erasing_book_id && tmp->next != NULL) tmp = tmp->next;
+        for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+            if (i->data.ISBN == target_ISBN) {
+                if (is_first) {
+                    book_info = i->data;
+                    is_first = 0;
+                } else {
+                    printf(", ");
+                }
 
-            if (tmp->next == NULL && tmp->data.id != erasing_book_id)
-                printf("해당 도서는 존재하지 않습니다.\n");
-            else if (tmp->data.available == 'Y') {
-                erase(BOOK, tmp);
-                printf("해당 도서가 삭제되었습니다.\n");
-                sync_file(BOOK);
-            } else {
-                printf("이 도서는 삭제할 수 없습니다.\n");
+                printf("%d(대여 가능 여부 : %c)", i->data.id, i->data.available);
             }
+        }
+    }
 
+    if (is_first == 1) {
+        printf("도서관에서 제공하지 않는 도서입니다.\n");
+        return;
+    }
+
+    printf("\n도서명: %s\n", book_info.name);
+    printf("출판사: %s\n", book_info.publisher);
+    printf("저자명: %s\n", book_info.author);
+    printf("ISBN: %lld\n", book_info.ISBN);
+    printf("소장처: %s\n\n", book_info.location);
+
+    int client_id;
+    printf("학번을 입력하세요: ");
+    scanf("%d", &client_id);
+
+    struct client_node *target_client_node;
+
+    for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+        if (i->data.id == client_id) {
+            target_client_node = i;
             break;
-        default:
-            printf("유효하지 않은 번호입니다.\n");
+        } else if (i->next == NULL && i->data.id != client_id) {
+            fprintf(stderr, "\n학번이 올바르지 않습니다.\n");
+            return;
+        }
+    }
+
+    int book_id;
+    printf("도서번호를 입력하세요: ");
+    scanf("%d", &book_id);
+
+    struct book_node *target_book_node;
+
+    for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+        if (i->data.id == book_id) {
+            target_book_node = i;
+            break;
+        } else if (i->next == NULL && i->data.id != book_id) {
+            fprintf(stderr, "\n도서번호가 올바르지 않습니다.\n");
+            return;
+        }
+    }
+
+    printf("이 도서를 대여합니까? ");
+    getchar();
+    if (getchar() == 'N') return;
+    else if (target_book_node->data.available == 'N') {
+        fprintf(stderr, "\n이 도서는 대여할 수 없습니다.\n");
+        return;
+    }
+    
+
+    // BORROW: 대여 목록 업데이트
+    struct borrow borrow_data;
+    borrow_data.client_id = target_client_node->data.id;
+    borrow_data.book_id = target_book_node->data.id;
+
+    time_t now = time(NULL);
+    borrow_data.borrow_date = now; // 대여한 날 기록
+    now += 24 * 60 * 60 * 30; // 24시간 * 60분 * 60초 == 1일
+    struct tm *t = localtime(&now);
+    if (t->tm_wday == 0) now += 24 * 60 * 60; // 일요일이면 반납기간을 하루 더 주기 (31일)
+    borrow_data.return_date = now; // 반납해야할 날 기록
+
+    push_front(BORROW, &borrow_data);
+    sort_list(BORROW);
+    sync_file(BORROW);
+
+    // BOOK: 대여 가능 여부 업데이트
+    target_book_node->data.available = 'N';
+    sync_file(BOOK);
+
+    printf("\n도서가 대여 되었습니다.\n");
+}
+
+void return_book() {
+    int client_id;
+    printf("학번을 입력하세요: ");
+    scanf("%d", &client_id);
+
+    printf("\n>> 회원의 대여 목록 <<\n");
+    client_borrow_info(client_id);
+
+    int book_id;
+    printf("\n반납할 도서번호를 입력하세요: ");
+    scanf("%d", &book_id);
+
+    printf("\n도서 반납처리를 할까요? ");
+    getchar();
+    if (getchar() == 'N') return;
+
+    // BORROW 데이터에 반납 반영하기
+    struct borrow_node *prev = NULL;
+
+    for (struct borrow_node *i = borrow_list_head; i != NULL; i = i->next) {
+        if (i->data.book_id == book_id) break;
+        else if (i->next == NULL && i->data.book_id != book_id) {
+            fprintf(stderr, "\n도서가 존재하지 않습니다.\n");
+            return;
+        }
+        prev = i;
+    }
+
+    erase(BORROW, prev);
+    sync_file(BORROW);
+
+    // BOOK 데이터에 반납 반영하기
+    for (struct book_node *i = book_list_head; i != NULL; i = i->next) {
+        if (i->data.id == book_id) {
+            i->data.available = 'Y';
+            break;
+        }
+    }
+
+    sync_file(BOOK);
+
+    printf("\n도서가 반납 되었습니다.\n");
+}
+
+void print_client_info(struct client client) {
+    printf("학번 : %d\n", client.id);
+    printf("이름 : %s\n", client.name);
+    printf("주소 : %s\n", client.address);
+    printf("전화번호 : %s\n", client.phone_number);
+}
+
+void client_finder(enum e_find_client_by by, ...) { // (search by, target's data type, target)
+    if (by == SEARCH_ALL_CLIENT) { // 3. 전체검색
+        for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
+            print_client_info(i->data);
+            putchar('\n');
+        }
+        return;
+    }
+
+    // 1. 이름 검색, 2. 학번 검색
+    va_list ap;
+    va_start(ap, by);
+    enum e_data_type type = va_arg(ap, enum e_data_type);
+    
+    int int_target;
+    char *str_target;
+
+    if (type == INT)
+        int_target = va_arg(ap, int);
+    else if (type == STRING)
+        str_target = va_arg(ap, char *);
+    
+    for (struct client_node *i = client_list_head; i != NULL; i = i -> next) {
+        if (by == CLIENT_NAME) {
+            if (strcmp(i->data.name, str_target) == 0)
+                print_client_info(i->data);
+        } else if (by == CLIENT_ID) {
+            if (i->data.id == int_target) {
+                print_client_info(i->data);
+                break; // 같은 학번이 여러 개일 수 없다.
+            }
+        }
+    }
+}
+
+void search_client() {
+    while (1) {
+        printf("\n>> 회원 목록 <<\n");
+        printf("1. 이름 검색\t\t2. 학번 검색\n3. 전체 검색\t\t4. 이전 메뉴\n\n");
+        
+        int select;
+        printf("번호를 선택하세요: ");
+        scanf("%d", &select);
+
+        if (select == 1) {
+            char target_name[50];
+            printf("\n회원의 이름을 입력하세요: ");
+            getchar();
+            scanf("%[^\n]", target_name);
+
+            client_finder(CLIENT_NAME, STRING, target_name);
+        } else if (select == 2) {
+            int target_id;
+            printf("\n회원의 학번을 입력하세요: ");
+            scanf("%d", &target_id);
+
+            client_finder(CLIENT_ID, INT, target_id);
+        } else if (select == 3) {
+            printf("\n전체 검색 결과\n");
+            client_finder(SEARCH_ALL_CLIENT);
+        } else if (select == 4) {
+            break;
+        }
     }
 }
 
 void admin_menu() {
-    printf("\n>> 관리자 메뉴 <<\n");
-    printf("1. 도서 등록\t\t2. 도서 삭제\n3. 도서 대여\t\t4. 도서 반납\n5. 도서 검색\t\t6. 회원 목록\n7. 로그아웃\t\t8. 프로그램 종료\n\n");
+    while (1) {
+        printf("\n>> 관리자 메뉴 <<\n");
+        printf("1. 도서 등록\t\t2. 도서 삭제\n3. 도서 대여\t\t4. 도서 반납\n5. 도서 검색\t\t6. 회원 목록\n7. 로그아웃\t\t8. 프로그램 종료\n\n");
 
-    int select;
-    printf("번호를 선택하세요: ");
-    scanf("%d", &select);
+        int select;
+        printf("번호를 선택하세요: ");
+        scanf("%d", &select);
 
-    if (select == 1) {
-        add_book();
-    } else if (select == 2) {
-        delete_book();
-    } else if (select == 3) {
-        // borrow_book();
-    } else if (select == 4) {
-        // return_book();
-    } else if (select == 5) {
-        // search_book();
-    } else if (select == 6) {
-        // search_client();
-    } else if (select == 7) {
-        return;
-    } else if (select == 8) {
-        exit(0);
+        if (select == 1) {
+            add_book();
+        } else if (select == 2) {
+            delete_book();
+        } else if (select == 3) {
+            borrow_book();
+        } else if (select == 4) {
+            return_book();
+        } else if (select == 5) {
+            search_book();
+        } else if (select == 6) {
+            search_client();
+        } else if (select == 7) {
+            return;
+        } else if (select == 8) {
+            exit(0);
+        }
     }
 }
 
@@ -665,14 +930,21 @@ void signup() {
 
 	printf("학번: ");
 	scanf("%d", &client_data.id);
+
 	printf("비밀번호: ");
 	scanf("%s", client_data.password);
+
 	printf("이름: ");
-	scanf("%s", client_data.name);
+    getchar();
+	scanf("%[^\n]", client_data.name);
+
 	printf("주소: ");
-	scanf("%s", client_data.address);
+    getchar();
+	scanf("%[^\n]", client_data.address);
+
 	printf("전화번호: ");
-	scanf("%s", client_data.phone_number);
+    getchar();
+	scanf("%[^\n]", client_data.phone_number);
 
 	for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
 		if (i->data.id == client_data.id) {
@@ -715,21 +987,6 @@ void login() {
 int main() {
     initialize_lists();
     sort_list(ALL_FILE_OR_STRUCT);
-	
-#ifdef DEBUG
-	print_list(CLIENT);
-	putchar('\n');
-	erase(CLIENT, NULL); // 맨 앞 노드 삭제
-	for (struct client_node *i = client_list_head; i != NULL; i = i->next) {
-		if (i->next->data.id == 20230004) {
-			erase(CLIENT, i); // 20230004 삭제
-			break;
-		}
-	}
-    print_list(CLIENT);
-
-	save_to_file(CLIENT);
-#endif
 
 	while (1) {
         printf(">> 도서 관리 프로그램 <<\n");
